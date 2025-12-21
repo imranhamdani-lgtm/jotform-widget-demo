@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; }
+        input, select { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+        label { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <label>Project ID</label>
+    <input type="text" id="projectId" placeholder="Ex: PRJ-001">
+    
+    <label>Client (auto-filled)</label>
+    <input type="text" id="clientName" readonly placeholder="...">
+
+    <script>
+        // Données de test (simulées)
+        const projects = {
+            "PRJ-001": { client: "Acme Corp", service: "Maintenance" },
+            "PRJ-002": { client: "Tech Industries", service: "Installation" },
+            "PRJ-003": { client: "Global Services", service: "Inspection" }
+        };
+
+        const projectInput = document.getElementById('projectId');
+        const clientInput = document.getElementById('clientName');
+
+        // Auto-remplissage quand on tape un ID
+        projectInput.addEventListener('input', function() {
+            const project = projects[this.value.toUpperCase()];
+            clientInput.value = project ? project.client : '';
+        });
+
+        // Intégration JotForm
+        JFCustomWidget.subscribe("ready", function() {
+            console.log("Widget ready");
+        });
+
+        JFCustomWidget.subscribe("submit", function() {
+            const data = {
+                projectId: projectInput.value,
+                client: clientInput.value
+            };
+            JFCustomWidget.sendSubmit({
+                valid: projectInput.value !== '',
+                value: JSON.stringify(data)
+            });
+        });
+    </script>
+</body>
+</html>
