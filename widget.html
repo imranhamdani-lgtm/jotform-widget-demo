@@ -14,26 +14,26 @@
 <body>
     <div id="status">Chargement des projets...</div>
     
-    <label>Project #</label>
+    <label for="projectSelect">Project #</label>
     <select id="projectSelect">
         <option value="">-- Sélectionner un projet --</option>
     </select>
     
-    <label>Client (auto-filled)</label>
+    <label for="clientName">Client (auto-filled)</label>
     <input type="text" id="clientName" readonly>
     
-    <label>Vehicle</label>
+    <label for="vehicleSelect">Vehicle</label>
     <select id="vehicleSelect">
         <option value="">-- Sélectionner un véhicule --</option>
     </select>
 
     <script>
-        const CONFIG = {
-            baseUrl: 'https://whl3ok5a.budibase.app/api/public/v1',
-            apiKey: '5bef85c63eccc40cfb8d68f7bd7e518c-e4fde79ad3356892b596370543b2af6e59a7245e0b4e35d9b2ce4a9d6e43d07d7b4dd6938a28fcc6dc',
-            appId: 'app_whl3ok5a_63d84e8fec734c51b6c25ffb8a40fbfd',
-            projectsTableId: 'ta_8ed4650a5c5041538e4510a3b6350ca0',
-            vehiclesTableId: 'ta_9b93207c19104a8f9acf951fae225b20'
+        // URL du proxy Cloudflare Worker (remplace par ton URL)
+        const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        
+        const TABLES = {
+            projects: 'ta_8ed4650a5c5041538e4510a3b6350ca0',
+            vehicles: 'ta_9b93207c19104a8f9acf951fae225b20'
         };
 
         let projects = [];
@@ -43,16 +43,8 @@
         const status = document.getElementById('status');
 
         async function fetchTable(tableId) {
-            const response = await fetch(`${CONFIG.baseUrl}/tables/${tableId}/rows/search`, {
-                method: 'POST',
-                headers: {
-                    'x-budibase-api-key': CONFIG.apiKey,
-                    'x-budibase-app-id': CONFIG.appId,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            });
-            if (!response.ok) throw new Error('API Error: ' + response.status);
+            const response = await fetch(`${PROXY_URL}?table=${tableId}`);
+            if (!response.ok) throw new Error('Proxy error: ' + response.status);
             const result = await response.json();
             return result.data;
         }
@@ -60,7 +52,7 @@
         async function loadData() {
             try {
                 // Charger projets
-                projects = await fetchTable(CONFIG.projectsTableId);
+                projects = await fetchTable(TABLES.projects);
                 projects.forEach(p => {
                     const option = document.createElement('option');
                     option.value = p.project_number;
@@ -69,7 +61,7 @@
                 });
 
                 // Charger véhicules
-                const vehicles = await fetchTable(CONFIG.vehiclesTableId);
+                const vehicles = await fetchTable(TABLES.vehicles);
                 vehicles.forEach(v => {
                     const option = document.createElement('option');
                     option.value = v.vehicle_number;
@@ -84,15 +76,14 @@
             }
         }
 
+        // Auto-remplissage du client
         projectSelect.addEventListener('change', function() {
             const project = projects.find(p => p.project_number === this.value);
             clientInput.value = project ? project.client : '';
         });
 
-        JFCustomWidget.subscribe("ready", function() {
-            loadData();
-        });
-
+        // Intégration JotForm
+        JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", function() {
             JFCustomWidget.sendSubmit({
                 valid: projectSelect.value !== '',
@@ -104,7 +95,12 @@
             });
         });
 
-        if (!window.JFCustomWidget) loadData();
+        // Fallback: charger les données si ready ne se déclenche pas
+        setTimeout(function() {
+            if (status.textContent === 'Chargement des projets...') {
+                loadData();
+            }
+        }, 500);
     </script>
 </body>
 </html>
