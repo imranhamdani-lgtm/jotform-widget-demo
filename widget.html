@@ -4,50 +4,107 @@
     <meta charset="UTF-8">
     <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 10px; }
+        body { font-family: Arial, sans-serif; padding: 10px; margin: 0; }
         input, select { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
-        label { font-weight: bold; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
+        #status { color: #666; font-size: 12px; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <label>Project ID</label>
-    <input type="text" id="projectId" placeholder="Ex: PRJ-001">
+    <div id="status">Chargement des projets...</div>
+    
+    <label>Project #</label>
+    <select id="projectSelect">
+        <option value="">-- Sélectionner un projet --</option>
+    </select>
     
     <label>Client (auto-filled)</label>
-    <input type="text" id="clientName" readonly placeholder="...">
+    <input type="text" id="clientName" readonly>
+    
+    <label>Vehicle</label>
+    <select id="vehicleSelect">
+        <option value="">-- Sélectionner un véhicule --</option>
+    </select>
 
     <script>
-        // Données de test (simulées)
-        const projects = {
-            "PRJ-001": { client: "Acme Corp", service: "Maintenance" },
-            "PRJ-002": { client: "Tech Industries", service: "Installation" },
-            "PRJ-003": { client: "Global Services", service: "Inspection" }
+        const CONFIG = {
+            baseUrl: 'https://whl3ok5a.budibase.app/api/public/v1',
+            apiKey: '5bef85c63eccc40cfb8d68f7bd7e518c-e4fde79ad3356892b596370543b2af6e59a7245e0b4e35d9b2ce4a9d6e43d07d7b4dd6938a28fcc6dc',
+            appId: 'app_whl3ok5a_63d84e8fec734c51b6c25ffb8a40fbfd',
+            projectsTableId: 'ta_8ed4650a5c5041538e4510a3b6350ca0',
+            vehiclesTableId: 'ta_9b93207c19104a8f9acf951fae225b20'
         };
 
-        const projectInput = document.getElementById('projectId');
+        let projects = [];
+        const projectSelect = document.getElementById('projectSelect');
+        const vehicleSelect = document.getElementById('vehicleSelect');
         const clientInput = document.getElementById('clientName');
+        const status = document.getElementById('status');
 
-        // Auto-remplissage quand on tape un ID
-        projectInput.addEventListener('input', function() {
-            const project = projects[this.value.toUpperCase()];
+        async function fetchTable(tableId) {
+            const response = await fetch(`${CONFIG.baseUrl}/tables/${tableId}/rows/search`, {
+                method: 'POST',
+                headers: {
+                    'x-budibase-api-key': CONFIG.apiKey,
+                    'x-budibase-app-id': CONFIG.appId,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+            });
+            if (!response.ok) throw new Error('API Error: ' + response.status);
+            const result = await response.json();
+            return result.data;
+        }
+
+        async function loadData() {
+            try {
+                // Charger projets
+                projects = await fetchTable(CONFIG.projectsTableId);
+                projects.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.project_number;
+                    option.textContent = `${p.project_number} - ${p.client}`;
+                    projectSelect.appendChild(option);
+                });
+
+                // Charger véhicules
+                const vehicles = await fetchTable(CONFIG.vehiclesTableId);
+                vehicles.forEach(v => {
+                    const option = document.createElement('option');
+                    option.value = v.vehicle_number;
+                    option.textContent = v.vehicle_number;
+                    vehicleSelect.appendChild(option);
+                });
+
+                status.textContent = `${projects.length} projets, ${vehicles.length} véhicules`;
+            } catch (error) {
+                status.innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+                console.error(error);
+            }
+        }
+
+        projectSelect.addEventListener('change', function() {
+            const project = projects.find(p => p.project_number === this.value);
             clientInput.value = project ? project.client : '';
         });
 
-        // Intégration JotForm
         JFCustomWidget.subscribe("ready", function() {
-            console.log("Widget ready");
+            loadData();
         });
 
         JFCustomWidget.subscribe("submit", function() {
-            const data = {
-                projectId: projectInput.value,
-                client: clientInput.value
-            };
             JFCustomWidget.sendSubmit({
-                valid: projectInput.value !== '',
-                value: JSON.stringify(data)
+                valid: projectSelect.value !== '',
+                value: JSON.stringify({
+                    project_number: projectSelect.value,
+                    client: clientInput.value,
+                    vehicle: vehicleSelect.value
+                })
             });
         });
+
+        if (!window.JFCustomWidget) loadData();
     </script>
 </body>
 </html>
