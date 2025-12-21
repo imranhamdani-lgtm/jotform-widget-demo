@@ -28,7 +28,6 @@
     </select>
 
     <script>
-        // URL du proxy Cloudflare Worker (remplace par ton URL)
         const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
         
         const TABLES = {
@@ -37,6 +36,8 @@
         };
 
         let projects = [];
+        let dataLoaded = false;
+        
         const projectSelect = document.getElementById('projectSelect');
         const vehicleSelect = document.getElementById('vehicleSelect');
         const clientInput = document.getElementById('clientName');
@@ -50,8 +51,10 @@
         }
 
         async function loadData() {
+            if (dataLoaded) return;
+            dataLoaded = true;
+            
             try {
-                // Charger projets
                 projects = await fetchTable(TABLES.projects);
                 projects.forEach(p => {
                     const option = document.createElement('option');
@@ -60,7 +63,6 @@
                     projectSelect.appendChild(option);
                 });
 
-                // Charger véhicules
                 const vehicles = await fetchTable(TABLES.vehicles);
                 vehicles.forEach(v => {
                     const option = document.createElement('option');
@@ -71,18 +73,17 @@
 
                 status.textContent = `${projects.length} projets, ${vehicles.length} véhicules`;
             } catch (error) {
+                dataLoaded = false;
                 status.innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
                 console.error(error);
             }
         }
 
-        // Auto-remplissage du client
         projectSelect.addEventListener('change', function() {
             const project = projects.find(p => p.project_number === this.value);
             clientInput.value = project ? project.client : '';
         });
 
-        // Intégration JotForm
         JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", function() {
             JFCustomWidget.sendSubmit({
@@ -95,7 +96,6 @@
             });
         });
 
-        // Fallback: charger les données si ready ne se déclenche pas
         setTimeout(function() {
             if (status.textContent === 'Chargement des projets...') {
                 loadData();
