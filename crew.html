@@ -136,6 +136,26 @@
         let dataLoaded = false;
         const MAX_CREW = 4;
 
+        function getValues() {
+            const crewData = {};
+            selectedCrew.forEach((crew, index) => {
+                const num = index + 1;
+                crewData[`Crew ${num} ID`] = crew.crew_id;
+                crewData[`Crew ${num} First Name`] = crew.first_name;
+                crewData[`Crew ${num} Last Name`] = crew.last_name;
+            });
+            return crewData;
+        }
+
+        function sendCurrentData() {
+            const values = getValues();
+            const isValid = selectedCrew.length > 0;
+            JFCustomWidget.sendData({
+                valid: isValid,
+                value: JSON.stringify(values)
+            });
+        }
+
         async function loadData() {
             if (dataLoaded) return;
             dataLoaded = true;
@@ -156,6 +176,7 @@
                 });
                 
                 document.getElementById('status').textContent = `${crewList.length} crew members available`;
+                sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
                 document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
@@ -181,6 +202,7 @@
             if (crew) {
                 selectedCrew.push(crew);
                 updateTable();
+                sendCurrentData();
             }
             
             $(this).val('').trigger('change');
@@ -212,17 +234,7 @@
         function removeCrew(index) {
             selectedCrew.splice(index, 1);
             updateTable();
-        }
-
-        function getValues() {
-            const crewData = {};
-            selectedCrew.forEach((crew, index) => {
-                const num = index + 1;
-                crewData[`Crew ${num} ID`] = crew.crew_id;
-                crewData[`Crew ${num} First Name`] = crew.first_name;
-                crewData[`Crew ${num} Last Name`] = crew.last_name;
-            });
-            return crewData;
+            sendCurrentData();
         }
 
         JFCustomWidget.subscribe("ready", loadData);
