@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; margin: 0; }
+        .field { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        #status { color: #666; font-size: 12px; margin-bottom: 10px; }
+        .error { color: red; }
+        .select2-container { width: 100% !important; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f5f5f5; }
+        .remove-btn { color: red; cursor: pointer; font-weight: bold; }
+        .remove-btn:hover { text-decoration: underline; }
+        .max-warning { color: orange; font-size: 12px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div id="status">Chargement...</div>
+    
+    <div class="field">
+        <label for="crewSelect">Ajouter un membre (max 4)</label>
+        <select id="crewSelect" style="width: 100%">
+            <option value="">-- Rechercher un membre --</option>
+        </select>
+        <div id="maxWarning" class="max-warning" style="display: none;">Maximum 4 membres atteint</div>
+    </div>
+    
+    <table id="crewTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Prénom</th>
+                <th>Nom</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="crewTableBody">
+        </tbody>
+    </table>
+
+    <script>
+        const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        let crewList = [];
+        let selectedCrew = [];
+        let dataLoaded = false;
+        const MAX_CREW = 4;
+
+        async function loadData() {
+            if (dataLoaded) return;
+            dataLoaded = true;
+            
+            try {
+                const response = await fetch(`${PROXY_URL}?table=crew`);
+                const result = await response.json();
+                crewList = result.data || [];
+                
+                crewList.forEach(c => {
+                    const label = `${c.crew_id} - ${c.first_name} ${c.last_name}`;
+                    $('#crewSelect').append(new Option(label, c.crew_id, false, false));
+                });
+                
+                $('#crewSelect').select2({
+                    placeholder: '-- Rechercher un membre --',
+                    allowClear: true
+                });
+                
+                document.getElementById('status').textContent = `${crewList.length} membres disponibles`;
+            } catch (error) {
+                dataLoaded = false;
+                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+            }
+        }
+
+        $('#crewSelect').on('change', function() {
+            const crewId = this.value;
+            if (!crewId) return;
+            
+            if (selectedCrew.length >= MAX_CREW) {
+                document.getElementById('maxWarning').style.display = 'block';
+                $(this).val('').trigger('change');
+                return;
+            }
+            
+            if (selectedCrew.find(c => c.crew_id === crewId)) {
+                $(this).val('').trigger('change');
+                return;
+            }
+            
+            const crew = crewList.find(c => c.crew_id === crewId);
+            if (crew) {
+                selectedCrew.push(crew);
+                updateTable();
+            }
+            
+            $(this).val('').trigger('change');
+        });
+
+        function updateTable() {
+            const tbody = document.getElementById('crewTableBody');
+            tbody.innerHTML = '';
+            
+            selectedCrew.forEach((crew, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${crew.crew_id}</td>
+                    <td>${crew.first_name}</td>
+                    <td>${crew.last_name}</td>
+                    <td><span class="remove-btn" onclick="removeCrew(${index})">✕ Retirer</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('maxWarning').style.display = 
+                selectedCrew.length >= MAX_CREW ? 'block' : 'none';
+        }
+
+        function removeCrew(index) {
+            selectedCrew.splice(index, 1);
+            updateTable();
+        }
+
+        function getValues() {
+            const crewData = {};
+            selectedCrew.forEach((crew, index) => {
+                const num = index + 1;
+                crewData[`Crew ${num} ID`] = crew.crew_id;
+                crewData[`Crew ${num} First Name`] = crew.first_name;
+                crewData[`Crew ${num} Last Name`] = crew.last_name;
+            });
+            return crewData;
+        }
+
+        JFCustomWidget.subscribe("ready", loadData);
+        JFCustomWidget.subscribe("submit", function() {
+            const values = getValues();
+            JFCustomWidget.sendSubmit({
+                valid: selectedCrew.length > 0,
+                value: JSON.stringify(values)
+            });
+        });
+
+        setTimeout(() => { if (!dataLoaded) loadData(); }, 500);
+    </script>
+</body>
+</html>
