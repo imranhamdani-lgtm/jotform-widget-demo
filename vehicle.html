@@ -16,12 +16,12 @@
     </style>
 </head>
 <body>
-    <div id="status">Chargement...</div>
+    <div id="status">Loading...</div>
     
     <div class="field">
         <label for="vehicleSelect">Vehicle #</label>
         <select id="vehicleSelect" style="width: 100%">
-            <option value="">-- Rechercher un véhicule --</option>
+            <option value="">-- Search vehicle --</option>
         </select>
     </div>
 
@@ -45,14 +45,14 @@
                 });
                 
                 $('#vehicleSelect').select2({
-                    placeholder: '-- Rechercher un véhicule --',
+                    placeholder: '-- Search vehicle --',
                     allowClear: true
                 });
                 
-                document.getElementById('status').textContent = `${vehicles.length} véhicules`;
+                document.getElementById('status').textContent = `${vehicles.length} vehicles loaded`;
             } catch (error) {
                 dataLoaded = false;
-                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+                document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         }
 
