@@ -17,12 +17,12 @@
     </style>
 </head>
 <body>
-    <div id="status">Chargement...</div>
+    <div id="status">Loading...</div>
     
     <div class="field">
         <label for="projectSelect">Project #</label>
         <select id="projectSelect" style="width: 100%">
-            <option value="">-- Rechercher un projet --</option>
+            <option value="">-- Search project --</option>
         </select>
     </div>
     
@@ -51,14 +51,14 @@
                 });
                 
                 $('#projectSelect').select2({
-                    placeholder: '-- Rechercher un projet --',
+                    placeholder: '-- Search project --',
                     allowClear: true
                 });
                 
-                document.getElementById('status').textContent = `${projects.length} projets`;
+                document.getElementById('status').textContent = `${projects.length} projects loaded`;
             } catch (error) {
                 dataLoaded = false;
-                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+                document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         }
 
