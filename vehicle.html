@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; margin: 0; }
+        .field { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        #status { color: #666; font-size: 12px; margin-bottom: 10px; }
+        .error { color: red; }
+        .select2-container { width: 100% !important; }
+    </style>
+</head>
+<body>
+    <div id="status">Chargement...</div>
+    
+    <div class="field">
+        <label for="vehicleSelect">Vehicle #</label>
+        <select id="vehicleSelect" style="width: 100%">
+            <option value="">-- Rechercher un véhicule --</option>
+        </select>
+    </div>
+
+    <script>
+        const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        let vehicles = [];
+        let dataLoaded = false;
+
+        async function loadData() {
+            if (dataLoaded) return;
+            dataLoaded = true;
+            
+            try {
+                const response = await fetch(`${PROXY_URL}?table=vehicles`);
+                const result = await response.json();
+                vehicles = result.data || [];
+                
+                vehicles.forEach(v => {
+                    const option = new Option(v.vehicle_number, v.vehicle_number, false, false);
+                    $('#vehicleSelect').append(option);
+                });
+                
+                $('#vehicleSelect').select2({
+                    placeholder: '-- Rechercher un véhicule --',
+                    allowClear: true
+                });
+                
+                document.getElementById('status').textContent = `${vehicles.length} véhicules`;
+            } catch (error) {
+                dataLoaded = false;
+                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+            }
+        }
+
+        function getValues() {
+            return {
+                "Vehicle #": $('#vehicleSelect').val() || ''
+            };
+        }
+
+        JFCustomWidget.subscribe("ready", loadData);
+        JFCustomWidget.subscribe("submit", function() {
+            const values = getValues();
+            JFCustomWidget.sendSubmit({
+                valid: values["Vehicle #"] !== '',
+                value: JSON.stringify(values)
+            });
+        });
+
+        setTimeout(() => { if (!dataLoaded) loadData(); }, 500);
+    </script>
+</body>
+</html>
