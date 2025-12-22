@@ -4,21 +4,40 @@
     <meta charset="UTF-8">
     <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 10px; margin: 0; }
-        .field { margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; }
-        input[readonly] { 
-            background: #f0f0f0; 
-            padding: 12px; 
-            width: 100%; 
-            box-sizing: border-box; 
-            border: 1px solid #ccc;
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
+        * { box-sizing: border-box; }
+        body { 
+            font-family: Inter, sans-serif; 
+            padding: 0; 
+            margin: 0; 
+            background: transparent;
+            font-size: 14px;
+            color: #2c3345;
         }
-        #status { color: #666; font-size: 12px; margin-bottom: 10px; }
-        .error { color: red; }
+        .field { margin-bottom: 12px; }
+        label { 
+            font-weight: 500; 
+            display: block; 
+            margin-bottom: 6px;
+            color: #2c3345;
+            font-size: 14px;
+        }
+        input[readonly] { 
+            background: #f5f5f5; 
+            padding: 10px 12px; 
+            width: 100%; 
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3345;
+            outline: none;
+        }
+        #status { 
+            color: #8a94a6; 
+            font-size: 12px; 
+            margin-bottom: 8px;
+        }
+        .error { color: #d63a3a; }
     </style>
 </head>
 <body>
@@ -39,12 +58,10 @@
             dataLoaded = true;
             
             try {
-                // Get all existing documents to find the last SL number
                 const response = await fetch(`${PROXY_URL}?table=documents`);
                 const result = await response.json();
                 const documents = result.data || [];
                 
-                // Find the highest SL number
                 let maxNumber = 0;
                 documents.forEach(doc => {
                     if (doc.sl_number) {
@@ -56,7 +73,6 @@
                     }
                 });
                 
-                // Generate next SL number
                 const nextNumber = maxNumber + 1;
                 generatedSLNumber = `SL-${nextNumber.toString().padStart(3, '0')}`;
                 
@@ -93,7 +109,6 @@
 
         JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", async function() {
-            // Create the document entry in Budibase
             await createDocument();
             
             const values = getValues();
