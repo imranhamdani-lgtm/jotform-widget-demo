@@ -22,22 +22,22 @@
     </style>
 </head>
 <body>
-    <div id="status">Chargement...</div>
+    <div id="status">Loading...</div>
     
     <div class="field">
-        <label for="crewSelect">Ajouter un membre (max 4)</label>
+        <label for="crewSelect">Add crew member (max 4)</label>
         <select id="crewSelect" style="width: 100%">
-            <option value="">-- Rechercher un membre --</option>
+            <option value="">-- Search crew member --</option>
         </select>
-        <div id="maxWarning" class="max-warning" style="display: none;">Maximum 4 membres atteint</div>
+        <div id="maxWarning" class="max-warning" style="display: none;">Maximum 4 members reached</div>
     </div>
     
     <table id="crewTable">
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Prénom</th>
-                <th>Nom</th>
+                <th>First Name</th>
+                <th>Last Name</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -67,14 +67,14 @@
                 });
                 
                 $('#crewSelect').select2({
-                    placeholder: '-- Rechercher un membre --',
+                    placeholder: '-- Search crew member --',
                     allowClear: true
                 });
                 
-                document.getElementById('status').textContent = `${crewList.length} membres disponibles`;
+                document.getElementById('status').textContent = `${crewList.length} crew members available`;
             } catch (error) {
                 dataLoaded = false;
-                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+                document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         }
 
@@ -112,7 +112,7 @@
                     <td>${crew.crew_id}</td>
                     <td>${crew.first_name}</td>
                     <td>${crew.last_name}</td>
-                    <td><span class="remove-btn" onclick="removeCrew(${index})">✕ Retirer</span></td>
+                    <td><span class="remove-btn" onclick="removeCrew(${index})">✕ Remove</span></td>
                 `;
                 tbody.appendChild(row);
             });
