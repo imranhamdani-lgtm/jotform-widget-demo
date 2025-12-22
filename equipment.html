@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; margin: 0; }
+        .field { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        #status { color: #666; font-size: 12px; margin-bottom: 10px; }
+        .error { color: red; }
+        .select2-container { width: 100% !important; }
+    </style>
+</head>
+<body>
+    <div id="status">Chargement...</div>
+    
+    <div class="field">
+        <label for="projectorSelect">Projector #</label>
+        <select id="projectorSelect" style="width: 100%">
+            <option value="">-- Rechercher --</option>
+        </select>
+    </div>
+    
+    <div class="field">
+        <label for="utMachineSelect">UT Machine #</label>
+        <select id="utMachineSelect" style="width: 100%">
+            <option value="">-- Rechercher --</option>
+        </select>
+    </div>
+
+    <script>
+        const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        let equipments = [];
+        let dataLoaded = false;
+
+        async function loadData() {
+            if (dataLoaded) return;
+            dataLoaded = true;
+            
+            try {
+                const response = await fetch(`${PROXY_URL}?table=equipments`);
+                const result = await response.json();
+                equipments = result.data || [];
+                
+                const projectors = equipments.filter(e => e.equipment_type === 'Projector');
+                const utMachines = equipments.filter(e => e.equipment_type === 'UT Machine');
+                
+                projectors.forEach(e => {
+                    $('#projectorSelect').append(new Option(e.equipment_number, e.equipment_number, false, false));
+                });
+                
+                utMachines.forEach(e => {
+                    $('#utMachineSelect').append(new Option(e.equipment_number, e.equipment_number, false, false));
+                });
+                
+                $('#projectorSelect, #utMachineSelect').select2({
+                    placeholder: '-- Rechercher --',
+                    allowClear: true
+                });
+                
+                document.getElementById('status').textContent = `${projectors.length} projectors, ${utMachines.length} UT machines`;
+            } catch (error) {
+                dataLoaded = false;
+                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+            }
+        }
+
+        function getValues() {
+            return {
+                "Projector #": $('#projectorSelect').val() || '',
+                "UT Machine #": $('#utMachineSelect').val() || ''
+            };
+        }
+
+        JFCustomWidget.subscribe("ready", loadData);
+        JFCustomWidget.subscribe("submit", function() {
+            const values = getValues();
+            JFCustomWidget.sendSubmit({
+                valid: true,
+                value: JSON.stringify(values)
+            });
+        });
+
+        setTimeout(() => { if (!dataLoaded) loadData(); }, 500);
+    </script>
+</body>
+</html>
