@@ -41,7 +41,6 @@
         }
         .error { color: #d63a3a; }
         
-        /* Select2 JotForm Style */
         .select2-container { width: 100% !important; }
         .select2-container--default .select2-selection--single {
             height: 40px;
@@ -100,6 +99,22 @@
         let projects = [];
         let dataLoaded = false;
 
+        function getValues() {
+            return {
+                "Project #": $('#projectSelect').val() || '',
+                "Client Name": document.getElementById('clientName').value || ''
+            };
+        }
+
+        function sendCurrentData() {
+            const values = getValues();
+            const isValid = values["Project #"] !== '';
+            JFCustomWidget.sendData({
+                valid: isValid,
+                value: JSON.stringify(values)
+            });
+        }
+
         async function loadData() {
             if (dataLoaded) return;
             dataLoaded = true;
@@ -120,6 +135,7 @@
                 });
                 
                 document.getElementById('status').textContent = `${projects.length} projects loaded`;
+                sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
                 document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
@@ -129,14 +145,8 @@
         $('#projectSelect').on('change', function() {
             const project = projects.find(p => p.project_number === this.value);
             document.getElementById('clientName').value = project ? project.client : '';
+            sendCurrentData();
         });
-
-        function getValues() {
-            return {
-                "Project #": $('#projectSelect').val() || '',
-                "Client Name": document.getElementById('clientName').value || ''
-            };
-        }
 
         JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", function() {
