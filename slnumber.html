@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 10px; margin: 0; }
+        .field { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        input[readonly] { 
+            background: #f0f0f0; 
+            padding: 12px; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        #status { color: #666; font-size: 12px; margin-bottom: 10px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div id="status">Generating SL Number...</div>
+    
+    <div class="field">
+        <label for="slNumber">SL No.</label>
+        <input type="text" id="slNumber" readonly>
+    </div>
+
+    <script>
+        const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        let generatedSLNumber = '';
+        let dataLoaded = false;
+
+        async function loadData() {
+            if (dataLoaded) return;
+            dataLoaded = true;
+            
+            try {
+                // Get all existing documents to find the last SL number
+                const response = await fetch(`${PROXY_URL}?table=documents`);
+                const result = await response.json();
+                const documents = result.data || [];
+                
+                // Find the highest SL number
+                let maxNumber = 0;
+                documents.forEach(doc => {
+                    if (doc.sl_number) {
+                        const match = doc.sl_number.match(/SL-(\d+)/);
+                        if (match) {
+                            const num = parseInt(match[1], 10);
+                            if (num > maxNumber) maxNumber = num;
+                        }
+                    }
+                });
+                
+                // Generate next SL number
+                const nextNumber = maxNumber + 1;
+                generatedSLNumber = `SL-${nextNumber.toString().padStart(3, '0')}`;
+                
+                document.getElementById('slNumber').value = generatedSLNumber;
+                document.getElementById('status').textContent = 'SL Number generated';
+            } catch (error) {
+                dataLoaded = false;
+                document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function createDocument() {
+            try {
+                const response = await fetch(`${PROXY_URL}?table=documents&action=create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sl_number: generatedSLNumber,
+                        document_link: ''
+                    })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Error creating document:', error);
+                return null;
+            }
+        }
+
+        function getValues() {
+            return {
+                "SL No.": generatedSLNumber
+            };
+        }
+
+        JFCustomWidget.subscribe("ready", loadData);
+        JFCustomWidget.subscribe("submit", async function() {
+            // Create the document entry in Budibase
+            await createDocument();
+            
+            const values = getValues();
+            JFCustomWidget.sendSubmit({
+                valid: generatedSLNumber !== '',
+                value: JSON.stringify(values)
+            });
+        });
+
+        setTimeout(() => { if (!dataLoaded) loadData(); }, 500);
+    </script>
+</body>
+</html>
