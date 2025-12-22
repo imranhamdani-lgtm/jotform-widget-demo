@@ -16,19 +16,19 @@
     </style>
 </head>
 <body>
-    <div id="status">Chargement...</div>
+    <div id="status">Loading...</div>
     
     <div class="field">
         <label for="projectorSelect">Projector #</label>
         <select id="projectorSelect" style="width: 100%">
-            <option value="">-- Rechercher --</option>
+            <option value="">-- Search --</option>
         </select>
     </div>
     
     <div class="field">
         <label for="utMachineSelect">UT Machine #</label>
         <select id="utMachineSelect" style="width: 100%">
-            <option value="">-- Rechercher --</option>
+            <option value="">-- Search --</option>
         </select>
     </div>
 
@@ -58,14 +58,14 @@
                 });
                 
                 $('#projectorSelect, #utMachineSelect').select2({
-                    placeholder: '-- Rechercher --',
+                    placeholder: '-- Search --',
                     allowClear: true
                 });
                 
                 document.getElementById('status').textContent = `${projectors.length} projectors, ${utMachines.length} UT machines`;
             } catch (error) {
                 dataLoaded = false;
-                document.getElementById('status').innerHTML = `<span class="error">Erreur: ${error.message}</span>`;
+                document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         }
 
