@@ -84,6 +84,21 @@
         let vehicles = [];
         let dataLoaded = false;
 
+        function getValues() {
+            return {
+                "Vehicle #": $('#vehicleSelect').val() || ''
+            };
+        }
+
+        function sendCurrentData() {
+            const values = getValues();
+            const isValid = values["Vehicle #"] !== '';
+            JFCustomWidget.sendData({
+                valid: isValid,
+                value: JSON.stringify(values)
+            });
+        }
+
         async function loadData() {
             if (dataLoaded) return;
             dataLoaded = true;
@@ -104,17 +119,16 @@
                 });
                 
                 document.getElementById('status').textContent = `${vehicles.length} vehicles loaded`;
+                sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
                 document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         }
 
-        function getValues() {
-            return {
-                "Vehicle #": $('#vehicleSelect').val() || ''
-            };
-        }
+        $('#vehicleSelect').on('change', function() {
+            sendCurrentData();
+        });
 
         JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", function() {
