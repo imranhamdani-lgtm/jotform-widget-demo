@@ -91,6 +91,21 @@
         let equipments = [];
         let dataLoaded = false;
 
+        function getValues() {
+            return {
+                "Projector #": $('#projectorSelect').val() || '',
+                "UT Machine #": $('#utMachineSelect').val() || ''
+            };
+        }
+
+        function sendCurrentData() {
+            const values = getValues();
+            JFCustomWidget.sendData({
+                valid: true,
+                value: JSON.stringify(values)
+            });
+        }
+
         async function loadData() {
             if (dataLoaded) return;
             dataLoaded = true;
@@ -117,18 +132,16 @@
                 });
                 
                 document.getElementById('status').textContent = `${projectors.length} projectors, ${utMachines.length} UT machines`;
+                sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
                 document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         }
 
-        function getValues() {
-            return {
-                "Projector #": $('#projectorSelect').val() || '',
-                "UT Machine #": $('#utMachineSelect').val() || ''
-            };
-        }
+        $('#projectorSelect, #utMachineSelect').on('change', function() {
+            sendCurrentData();
+        });
 
         JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", function() {
