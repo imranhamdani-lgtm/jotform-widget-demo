@@ -53,6 +53,21 @@
         let generatedSLNumber = '';
         let dataLoaded = false;
 
+        function getValues() {
+            return {
+                "SL No.": generatedSLNumber
+            };
+        }
+
+        function sendCurrentData() {
+            const values = getValues();
+            const isValid = generatedSLNumber !== '';
+            JFCustomWidget.sendData({
+                valid: isValid,
+                value: JSON.stringify(values)
+            });
+        }
+
         async function loadData() {
             if (dataLoaded) return;
             dataLoaded = true;
@@ -78,6 +93,7 @@
                 
                 document.getElementById('slNumber').value = generatedSLNumber;
                 document.getElementById('status').textContent = 'SL Number generated';
+                sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
                 document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
@@ -99,12 +115,6 @@
                 console.error('Error creating document:', error);
                 return null;
             }
-        }
-
-        function getValues() {
-            return {
-                "SL No.": generatedSLNumber
-            };
         }
 
         JFCustomWidget.subscribe("ready", loadData);
