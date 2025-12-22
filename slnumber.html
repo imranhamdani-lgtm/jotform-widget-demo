@@ -68,28 +68,34 @@
             });
         }
 
+        async function getExistingDocuments() {
+            const response = await fetch(`${PROXY_URL}?table=documents`);
+            const result = await response.json();
+            return result.data || [];
+        }
+
+        function getNextSLNumber(documents) {
+            let maxNumber = 0;
+            documents.forEach(doc => {
+                if (doc.sl_number) {
+                    const match = doc.sl_number.match(/SL-(\d+)/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxNumber) maxNumber = num;
+                    }
+                }
+            });
+            const nextNumber = maxNumber + 1;
+            return `SL-${nextNumber.toString().padStart(3, '0')}`;
+        }
+
         async function loadData() {
             if (dataLoaded) return;
             dataLoaded = true;
             
             try {
-                const response = await fetch(`${PROXY_URL}?table=documents`);
-                const result = await response.json();
-                const documents = result.data || [];
-                
-                let maxNumber = 0;
-                documents.forEach(doc => {
-                    if (doc.sl_number) {
-                        const match = doc.sl_number.match(/SL-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) maxNumber = num;
-                        }
-                    }
-                });
-                
-                const nextNumber = maxNumber + 1;
-                generatedSLNumber = `SL-${nextNumber.toString().padStart(3, '0')}`;
+                const documents = await getExistingDocuments();
+                generatedSLNumber = getNextSLNumber(documents);
                 
                 document.getElementById('slNumber').value = generatedSLNumber;
                 document.getElementById('status').textContent = 'SL Number generated';
@@ -100,32 +106,64 @@
             }
         }
 
-        async function createDocument() {
-            try {
-                const response = await fetch(`${PROXY_URL}?table=documents&action=create`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sl_number: generatedSLNumber,
-                        document_link: ''
-                    })
-                });
-                return await response.json();
-            } catch (error) {
-                console.error('Error creating document:', error);
-                return null;
+        async function createDocumentWithRetry(maxRetries = 5) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    // Get fresh list of documents to check for duplicates
+                    const documents = await getExistingDocuments();
+                    const existingNumbers = documents.map(doc => doc.sl_number);
+                    
+                    // If our number already exists, generate a new one
+                    if (existingNumbers.includes(generatedSLNumber)) {
+                        generatedSLNumber = getNextSLNumber(documents);
+                        document.getElementById('slNumber').value = generatedSLNumber;
+                        sendCurrentData();
+                    }
+                    
+                    // Try to create the document
+                    const response = await fetch(`${PROXY_URL}?table=documents&action=create`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sl_number: generatedSLNumber,
+                            document_link: ''
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.error) {
+                        throw new Error(result.error);
+                    }
+                    
+                    return result; // Success
+                    
+                } catch (error) {
+                    console.warn(`Attempt ${attempt + 1} failed:`, error);
+                    if (attempt === maxRetries - 1) {
+                        throw error; // Last attempt failed
+                    }
+                }
             }
         }
 
         JFCustomWidget.subscribe("ready", loadData);
         JFCustomWidget.subscribe("submit", async function() {
-            await createDocument();
-            
-            const values = getValues();
-            JFCustomWidget.sendSubmit({
-                valid: generatedSLNumber !== '',
-                value: JSON.stringify(values)
-            });
+            try {
+                await createDocumentWithRetry();
+                
+                const values = getValues();
+                JFCustomWidget.sendSubmit({
+                    valid: generatedSLNumber !== '',
+                    value: JSON.stringify(values)
+                });
+            } catch (error) {
+                console.error('Failed to create document:', error);
+                JFCustomWidget.sendSubmit({
+                    valid: false,
+                    value: JSON.stringify({ error: error.message })
+                });
+            }
         });
 
         setTimeout(() => { if (!dataLoaded) loadData(); }, 500);
