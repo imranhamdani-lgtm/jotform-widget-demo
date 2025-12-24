@@ -96,6 +96,9 @@
 
     <script>
         const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        const DEFAULT_HEIGHT = 140;
+        const EXPANDED_HEIGHT = 350;
+        
         let projects = [];
         let dataLoaded = false;
 
@@ -132,6 +135,14 @@
                 $('#projectSelect').select2({
                     placeholder: '-- Search project --',
                     allowClear: true
+                });
+
+                // Resize iframe on dropdown open/close
+                $('#projectSelect').on('select2:open', function() {
+                    JFCustomWidget.requestFrameResize({ height: EXPANDED_HEIGHT });
+                });
+                $('#projectSelect').on('select2:close', function() {
+                    JFCustomWidget.requestFrameResize({ height: DEFAULT_HEIGHT });
                 });
                 
                 document.getElementById('status').textContent = `${projects.length} projects loaded`;
