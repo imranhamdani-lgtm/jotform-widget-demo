@@ -131,17 +131,49 @@
 
     <script>
         const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
-        const BASE_HEIGHT = 180;
-        const ROW_HEIGHT = 45;
-        const DROPDOWN_EXTRA = 200;
+        
+        // Height constants
+        const STATUS_HEIGHT = 20;
+        const LABEL_HEIGHT = 25;
+        const SELECT_HEIGHT = 50;
+        const WARNING_HEIGHT = 25;
+        const TABLE_HEADER_HEIGHT = 45;
+        const TABLE_ROW_HEIGHT = 45;
+        const EMPTY_ROW_HEIGHT = 50;
+        const DROPDOWN_HEIGHT = 200;
+        const PADDING = 20;
         
         let crewList = [];
         let selectedCrew = [];
         let dataLoaded = false;
+        let dropdownOpen = false;
         const MAX_CREW = 4;
 
         function calculateHeight() {
-            return BASE_HEIGHT + (selectedCrew.length * ROW_HEIGHT);
+            let height = STATUS_HEIGHT + LABEL_HEIGHT + SELECT_HEIGHT + TABLE_HEADER_HEIGHT + PADDING;
+            
+            // Add warning height if visible
+            if (selectedCrew.length >= MAX_CREW) {
+                height += WARNING_HEIGHT;
+            }
+            
+            // Add table rows height
+            if (selectedCrew.length === 0) {
+                height += EMPTY_ROW_HEIGHT;
+            } else {
+                height += selectedCrew.length * TABLE_ROW_HEIGHT;
+            }
+            
+            // Add dropdown height if open
+            if (dropdownOpen) {
+                height += DROPDOWN_HEIGHT;
+            }
+            
+            return height;
+        }
+
+        function resizeFrame() {
+            JFCustomWidget.requestFrameResize({ height: calculateHeight() });
         }
 
         function getValues() {
@@ -183,16 +215,18 @@
                     allowClear: true
                 });
 
-                // Resize iframe on dropdown open/close
+                // Track dropdown state and resize
                 $('#crewSelect').on('select2:open', function() {
-                    JFCustomWidget.requestFrameResize({ height: calculateHeight() + DROPDOWN_EXTRA });
+                    dropdownOpen = true;
+                    resizeFrame();
                 });
                 $('#crewSelect').on('select2:close', function() {
-                    JFCustomWidget.requestFrameResize({ height: calculateHeight() });
+                    dropdownOpen = false;
+                    resizeFrame();
                 });
                 
                 document.getElementById('status').textContent = `${crewList.length} crew members available`;
-                JFCustomWidget.requestFrameResize({ height: calculateHeight() });
+                resizeFrame();
                 sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
@@ -247,7 +281,7 @@
             document.getElementById('maxWarning').style.display = 
                 selectedCrew.length >= MAX_CREW ? 'block' : 'none';
             
-            JFCustomWidget.requestFrameResize({ height: calculateHeight() });
+            resizeFrame();
         }
 
         function removeCrew(index) {
