@@ -131,10 +131,18 @@
 
     <script>
         const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        const BASE_HEIGHT = 180;
+        const ROW_HEIGHT = 45;
+        const DROPDOWN_EXTRA = 200;
+        
         let crewList = [];
         let selectedCrew = [];
         let dataLoaded = false;
         const MAX_CREW = 4;
+
+        function calculateHeight() {
+            return BASE_HEIGHT + (selectedCrew.length * ROW_HEIGHT);
+        }
 
         function getValues() {
             const crewData = {};
@@ -174,8 +182,17 @@
                     placeholder: '-- Search crew member --',
                     allowClear: true
                 });
+
+                // Resize iframe on dropdown open/close
+                $('#crewSelect').on('select2:open', function() {
+                    JFCustomWidget.requestFrameResize({ height: calculateHeight() + DROPDOWN_EXTRA });
+                });
+                $('#crewSelect').on('select2:close', function() {
+                    JFCustomWidget.requestFrameResize({ height: calculateHeight() });
+                });
                 
                 document.getElementById('status').textContent = `${crewList.length} crew members available`;
+                JFCustomWidget.requestFrameResize({ height: calculateHeight() });
                 sendCurrentData();
             } catch (error) {
                 dataLoaded = false;
@@ -229,6 +246,8 @@
             
             document.getElementById('maxWarning').style.display = 
                 selectedCrew.length >= MAX_CREW ? 'block' : 'none';
+            
+            JFCustomWidget.requestFrameResize({ height: calculateHeight() });
         }
 
         function removeCrew(index) {
