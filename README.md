@@ -11,4 +11,4 @@ https://imranhamdani-lgtm.github.io/jotform-widget-demo/crew.html
 
 https://imranhamdani-lgtm.github.io/jotform-widget-demo/slnumber.html
 
-https://imranhamdani-lgtm.github.io/jotform-widget-demo/pt_reports.html
+https://imranhamdani-lgtm.github.io/jotform-widget-demo/PTreport.html
