@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="//js.jotform.com/JotFormCustomWidget.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: Inter, sans-serif; 
+            padding: 0; 
+            margin: 0; 
+            background: transparent;
+            font-size: 14px;
+            color: #2c3345;
+        }
+        .field { margin-bottom: 12px; }
+        label { 
+            font-weight: 500; 
+            display: block; 
+            margin-bottom: 6px;
+            color: #2c3345;
+            font-size: 14px;
+        }
+        input[readonly] { 
+            background: #f5f5f5; 
+            padding: 10px 12px; 
+            width: 100%; 
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3345;
+            outline: none;
+        }
+        #status { 
+            color: #8a94a6; 
+            font-size: 12px; 
+            margin-bottom: 8px;
+        }
+        .error { color: #d63a3a; }
+    </style>
+</head>
+<body>
+    <div id="status">Generating PT Report Number...</div>
+    
+    <div class="field">
+        <label for="documentNumber">PT Report No.</label>
+        <input type="text" id="documentNumber" readonly>
+    </div>
+
+    <script>
+        const PROXY_URL = 'https://budibase-proxy.imran-hamdani.workers.dev';
+        let generatedNumber = '';
+        let dataLoaded = false;
+
+        function getValues() {
+            return {
+                "PT Report No.": generatedNumber
+            };
+        }
+
+        function sendCurrentData() {
+            const values = getValues();
+            const isValid = generatedNumber !== '';
+            JFCustomWidget.sendData({
+                valid: isValid,
+                value: JSON.stringify(values)
+            });
+        }
+
+        async function getExistingDocuments() {
+            const response = await fetch(`${PROXY_URL}?table=pt_reports`);
+            const result = await response.json();
+            return result.data || [];
+        }
+
+        function getNextNumber(documents) {
+            let maxNumber = 0;
+            documents.forEach(doc => {
+                if (doc.document_number) {
+                    const match = doc.document_number.match(/PT-(\d+)/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxNumber) maxNumber = num;
+                    }
+                }
+            });
+            const nextNumber = maxNumber + 1;
+            return `PT-${nextNumber.toString().padStart(3, '0')}`;
+        }
+
+        async function loadData() {
+            if (dataLoaded) return;
+            dataLoaded = true;
+            
+            try {
+                const documents = await getExistingDocuments();
+                generatedNumber = getNextNumber(documents);
+                
+                document.getElementById('documentNumber').value = generatedNumber;
+                document.getElementById('status').textContent = 'PT Report Number generated';
+                sendCurrentData();
+            } catch (error) {
+                dataLoaded = false;
+                document.getElementById('status').innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        }
+
+        async function createDocumentWithRetry(maxRetries = 5) {
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    // Get fresh list to check for duplicates
+                    const documents = await getExistingDocuments();
+                    const existingNumbers = documents.map(doc => doc.document_number);
+                    
+                    // If our number already exists, generate a new one
+                    if (existingNumbers.includes(generatedNumber)) {
+                        generatedNumber = getNextNumber(documents);
+                        document.getElementById('documentNumber').value = generatedNumber;
+                        sendCurrentData();
+                    }
+                    
+                    // Try to create the document
+                    const response = await fetch(`${PROXY_URL}?table=pt_reports&action=create`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            document_number: generatedNumber
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.error) {
+                        throw new Error(result.error);
+                    }
+                    
+                    return result; // Success
+                    
+                } catch (error) {
+                    console.warn(`Attempt ${attempt + 1} failed:`, error);
+                    if (attempt === maxRetries - 1) {
+                        throw error;
+                    }
+                }
+            }
+        }
+
+        JFCustomWidget.subscribe("ready", loadData);
+        JFCustomWidget.subscribe("submit", async function() {
+            try {
+                await createDocumentWithRetry();
+                
+                const values = getValues();
+                JFCustomWidget.sendSubmit({
+                    valid: generatedNumber !== '',
+                    value: JSON.stringify(values)
+                });
+            } catch (error) {
+                console.error('Failed to create PT Report:', error);
+                JFCustomWidget.sendSubmit({
+                    valid: false,
+                    value: JSON.stringify({ error: error.message })
+                });
+            }
+        });
+
+        setTimeout(() => { if (!dataLoaded) loadData(); }, 500);
+    </script>
+</body>
+</html>
